@@ -4,25 +4,22 @@ from tkinter import simpledialog
 import random
 
 
-def calculate():
-    global base_chance, chance_stringvar, props, WA_num, WX_num
-    new_chance = base_chance
-    props_list = props.get(0, props.size())
-    if "Sustained" in props_list:
-        new_chance = min(new_chance + 0.125, 1.0)
-    if "Reroll 1s" in props_list:
-        new_chance = min(new_chance + 0.125, 1.0)
+def calculate(*args):
+    global chance_stringvar, props
 
-    new_chance += 0.05 * (WA_num.get() - WX_num.get())
-    new_chance = max(0, new_chance)
-    new_chance = min(0.834, new_chance)
 
-    chance_stringvar.set("Chance: " + str(new_chance))
+    # ADD: Parse variable number of attacks
+
+    # Hit chance calculation
+    # chance_to_hit = (6 - ballistic_skill.get() + 1) / 6
+
+    # Update the chance variable for display
+    chance_stringvar.set("Chance: " + str(0.5))
 
 
 def build_all_props_list(box):
     global PROPERTIES
-    for i in range(4):
+    for i in range(len(PROPERTIES)):
         box.insert(i, PROPERTIES[i])
 
 
@@ -64,38 +61,23 @@ def is_in_listbox(box, target):
 
 
 def light_infantry():
-    global WX_num, WY_num, WZ_num
-    WX_num.set(3)
-    WY_num.set(3)
-    WZ_num.set(1)
+    pass
 
 
 def medium_infantry():
-    global WX_num, WY_num, WZ_num
-    WX_num.set(4)
-    WY_num.set(3)
-    WZ_num.set(1)
-    calculate()
+    pass
 
 
 def heavy_infantry():
-    global WX_num, WY_num, WZ_num
-    WX_num.set(4)
-    WY_num.set(4)
-    WZ_num.set(2)
-    calculate()
+    pass
 
 
 def bike():
-    global WX_num, WY_num, WZ_num
-    WX_num.set(3)
-    WY_num.set(5)
-    WZ_num.set(2)
-    calculate()
+    pass
 
 
 def save_to_file():
-    global root, WA_num, WB_num, WC_num, WX_num, WY_num, WZ_num, chance_stringvar, props
+    global root, attacks, ballistic_skill, strength, toughness_num, armor_num, invuln_num, chance_stringvar, props
     title = simpledialog.askstring("Input", "Enter a title:")
     properties_string = ''
     properties_tuple = props.get(0, 'end')
@@ -109,32 +91,34 @@ def save_to_file():
     chance_float = float(chance_string)
     chance_float *= 100
     chance_float = round(chance_float, 3)
-    string = ("\n\n=============================\n" +
-              title +
-              "\n=============================" +
-              "\nChance to damage: " + str(chance_float) + "%" +
-              "\nAttacker Profile:" +
-              "\nA: " + str(WA_num.get()) +
-              "\tB: " + str(WB_num.get()) +
-              "\tC: " + str(WC_num.get()) +
-              "\n" + properties_string +
-              "\n----------------------------" +
-              "\nDefender Profile:" +
-              "\nX: " + str(WX_num.get()) +
-              "\tY: " + str(WY_num.get()) +
-              "\tZ: " + str(WZ_num.get()))
+    string = ''
+    # string = ("\n\n=============================\n" +
+    #           title +
+    #           "\n=============================" +
+    #           "\nChance to damage: " + str(chance_float) + "%" +
+    #           "\nAttacker Profile:" +
+    #           "\nA: " + str(attacks.get()) +
+    #           "\tB: " + str(ballistic_skill.get()) +
+    #           "\tC: " + str(strength.get()) +
+    #           "\n" + properties_string +
+    #           "\n----------------------------" +
+    #           "\nDefender Profile:" +
+    #           "\nX: " + str(toughness_num.get()) +
+    #           "\tY: " + str(armor_num.get()) +
+    #           "\tZ: " + str(invuln_num.get()))
 
     with open("results.txt", "a", encoding="utf-8") as f:
         f.write(string)
 
 
 base_chance = 0.5
-PROPERTIES = {0: "Anti", 1: "Reroll 1s",
-              2: "Sustained", 3: "Twin-linked"}
+PROPERTIES = {0:"Anti", 1:"Blast/Cleave", 2:"Crit 4+", 3:"Crit 5+", 4:"Devastating Wounds",
+              5:"Lethal Hits", 6:"Melta", 7:"Reroll 1s to Hit", 8:"Reroll 1s to Wound",
+              9:"Reroll All Misses", 10:"Sustained Hits", 11:"Torrent", 12:"Twin-Linked"}
 
 # Create the window
 root = tk.Tk()
-root.geometry('480x600')
+root.geometry('510x600')
 
 menubar = tk.Menu(root, bg='#6E6E6E', fg='#FFFFFF', activebackground='#ABABAB', relief='raised')
 profiles = tk.Menu(menubar, tearoff=0, bg='#6E6E6E', activebackground='#ABABAB', relief='raised')
@@ -148,9 +132,6 @@ profiles.add_command(label='Heavy Vehicle')
 
 root.config(menu=menubar)
 
-# Create the main UI frame
-# frame = tk.Frame(root)
-
 # Create the save button
 save_button = tk.Button(root, text='Save to File', command=save_to_file)
 save_button.place(anchor='nw', relx=0.01, rely=0.004)
@@ -160,37 +141,52 @@ chance_stringvar = tk.StringVar(root, value=("Chance: " + str(base_chance)))
 chance_label = tk.Label(root, bg='white', width=12, anchor='w', textvariable=chance_stringvar)
 chance_label.place(anchor='n', relx=0.5, rely=0.01)
 
+# Create the attacker stat list and UI widgets
+a_stat_list = ["A", "BS", "S", "AP", "D"]
+a_stats = {"A":tk.StringVar(root, value=''),
+          "BS":tk.StringVar(root, value=''),
+          "S":tk.StringVar(root, value=''),
+          "AP":tk.StringVar(root, value=''),
+          "D":tk.StringVar(root, value='')}
+a_labels = {"A":tk.Label(root, bg='white', text='# Attacks'),
+            "BS":tk.Label(root, bg='white', text='BS/WS'),
+            "S":tk.Label(root, bg='white', text='Strength'),
+            "AP":tk.Label(root, bg='white', text='AP'),
+            "D":tk.Label(root, bg='white', text='Damage')}
+a_boxes = {"A":tk.Entry(root, textvariable=a_stats['A']),
+           "BS":tk.Entry(root, textvariable=a_stats['BS']),
+           "S":tk.Entry(root, textvariable=a_stats['S']),
+           "AP":tk.Entry(root, textvariable=a_stats['AP']),
+           "D":tk.Entry(root, textvariable=a_stats['D'])}
+
 # Create the section label
 attacker_sect_label = tk.Label(root, bg='blue', fg='white', text='==Attacker==', width=50)
 attacker_sect_label.place(anchor='n', relx=0.5, rely=0.06)
 
-# Create IntVars, labels, and Scales for each ATTACKER attribute
-WA_num = tk.IntVar(root, value=4)
-WA_label = tk.Label(root, bg='white', text='A:')
-WA_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=WA_num, command=calculate)
-WA_label.place(anchor='w', relx=0.01, rely=0.125)
-WA_box.place(anchor='w', relx=0.05, rely=0.125)
+# Set common box properties and place boxes to be moved later
+for i in range(len(a_stat_list)):
+    a_boxes[a_stat_list[i]].config(width=5)
+    a_stats[a_stat_list[i]].trace_add("write", calculate)
+    a_boxes[a_stat_list[i]].place(x=0, y=0)
+root.update()
 
-WB_num = tk.IntVar(root, value=4)
-WB_label = tk.Label(root, bg='white', text='B:')
-WB_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=WB_num, command=calculate)
-WB_label.place(anchor='w', relx=0.12, rely=0.125)
-WB_box.place(anchor='w', relx=0.16, rely=0.125)
+atkY = 0.125
+offset = 10
+for i in range(len(a_stat_list)):
+    a_labels[a_stat_list[i]].place(anchor='w', x=offset, rely=atkY)
+    a_boxes[a_stat_list[i]].place(anchor='w', x=offset + a_boxes[a_stat_list[i]].winfo_width()/2 - a_boxes[a_stat_list[i]].winfo_width()/2, rely=atkY+0.04)
+    root.update()
+    offset += a_labels[a_stat_list[i]].winfo_width() + 20
 
-WC_num = tk.IntVar(root, value=4)
-WC_label = tk.Label(root, bg='white', text='C:')
-WC_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=WC_num, command=calculate)
-WC_label.place(anchor='w', relx=0.23, rely=0.125)
-WC_box.place(anchor='w', relx=0.27, rely=0.125)
 
 # Create a listbox of ALL possible properties
-all_props = tk.Listbox(root, width=15, selectmode="multiple")
+all_props = tk.Listbox(root, width=20, height=len(PROPERTIES), selectmode="multiple")
 build_all_props_list(all_props)
-all_props.place(anchor='nw', relx=0.01, rely=0.15)
+all_props.place(anchor='nw', relx=0.01, rely=atkY+0.1)
 
 # Create the listbox of selected properties
-props = tk.Listbox(root, width=15, selectmode="multiple")
-props.place(anchor='ne', relx=0.985, rely=0.15)
+props = tk.Listbox(root, width=20, height=len(PROPERTIES), selectmode="multiple")
+props.place(anchor='ne', relx=0.985, rely=atkY+0.1)
 
 # Create the add and remove properties buttons (--> and <--)
 add_button = tk.Button(root, text="☑", font=("Times New Roman", 18), command=add_prop)
@@ -202,28 +198,108 @@ remove_button.place(anchor='ne', relx=0.695, rely=0.25)
 remove_all_button = tk.Button(root, text="☒☒", font=("Times New Roman", 18), command=remove_all)
 remove_all_button.place(anchor='ne', relx=0.695, rely=0.325)
 
+# Create the attacker stat list and UI widgets
+t_stat_list = ["T", "Sv", "Inv", "W", "M"]
+t_stats = {"T":tk.StringVar(root, value=''),
+          "Sv":tk.StringVar(root, value=''),
+          "Inv":tk.StringVar(root, value=''),
+          "W":tk.StringVar(root, value=''),
+          "M":tk.StringVar(root, value='')}
+t_labels = {"T":tk.Label(root, bg='white', text='Toughness'),
+            "Sv":tk.Label(root, bg='white', text='Armor Save'),
+            "Inv":tk.Label(root, bg='white', text='Invuln Save'),
+            "W":tk.Label(root, bg='white', text='Wounds per Model'),
+            "M":tk.Label(root, bg='white', text='# of Models')}
+t_boxes = {"T":tk.Entry(root, textvariable=t_stats['T']),
+           "Sv":tk.Entry(root, textvariable=t_stats['Sv']),
+           "Inv":tk.Entry(root, textvariable=t_stats['Inv']),
+           "W":tk.Entry(root, textvariable=t_stats['W']),
+           "M":tk.Entry(root, textvariable=t_stats['M'])}
+
 # Create the section label
 target_sect_label = tk.Label(root, bg='red', fg='white', text='==Target==', width=50)
-target_sect_label.place(anchor='n', relx=0.5, rely=0.5)
+target_sect_label.place(anchor='n', relx=0.5, rely=0.6)
+
+# Set common box properties and place boxes to be moved later
+for i in range(len(t_stat_list)):
+    t_boxes[t_stat_list[i]].config(width=5)
+    t_stats[t_stat_list[i]].trace_add("write", calculate)
+    t_boxes[t_stat_list[i]].place(x=0, y=0)
+root.update()
+
+tgtY = 0.665
+offset = 10
+for i in range(len(t_stat_list)):
+    t_labels[t_stat_list[i]].place(anchor='w', x=offset, rely=tgtY)
+    t_boxes[t_stat_list[i]].place(anchor='w', x=offset + t_boxes[t_stat_list[i]].winfo_width()/2 - t_boxes[t_stat_list[i]].winfo_width()/2, rely=tgtY+0.04)
+    root.update()
+    offset += t_labels[t_stat_list[i]].winfo_width() + 20
+
+"""
+TGTY = 0.665
+OFFSET = 10
 
 # Create IntVars, labels, and Scales for each TARGET attribute
-WX_num = tk.IntVar(root, value=4)
-WX_label = tk.Label(root, bg='white', text='X:')
-WX_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=WX_num, command=calculate)
-WX_label.place(anchor='w', relx=0.01, rely=0.565)
-WX_box.place(anchor='w', relx=0.05, rely=0.565)
+toughness_num = tk.IntVar(root, value=4)
+toughness_label = tk.Label(root, bg='white', text='Toughness')
+toughness_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=toughness_num, command=calculate)
+toughness_label.place(anchor='w', x=OFFSET, rely=TGTY)
+toughness_box.place(x=0, y=0)
+root.update()
+toughness_box.place(anchor='w', x=OFFSET + toughness_label.winfo_width()/2 - toughness_box.winfo_width()/2, rely=TGTY+0.04)
 
-WY_num = tk.IntVar(root, value=4)
-WY_label = tk.Label(root, bg='white', text='Y:')
-WY_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=WY_num, command=calculate)
-WY_label.place(anchor='w', relx=0.12, rely=0.565)
-WY_box.place(anchor='w', relx=0.16, rely=0.565)
+OFFSET += toughness_label.winfo_width() + 15
 
-WZ_num = tk.IntVar(root, value=4)
-WZ_label = tk.Label(root, bg='white', text='Z:')
-WZ_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=WZ_num, command=calculate)
-WZ_label.place(anchor='w', relx=0.23, rely=0.565)
-WZ_box.place(anchor='w', relx=0.27, rely=0.565)
+armor_num = tk.IntVar(root, value=4)
+armor_label = tk.Label(root, bg='white', text='Armor Save')
+armor_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=armor_num, command=calculate)
+armor_label.place(anchor='w', x=OFFSET, rely=TGTY)
+armor_box.place(x=0, y=0)
+root.update()
+armor_box.place(anchor='w', x=OFFSET + armor_label.winfo_width()/2 - armor_box.winfo_width()/2, rely=TGTY+0.04)
+
+OFFSET += armor_label.winfo_width() + 15
+
+invuln_num = tk.IntVar(root, value=4)
+invuln_label = tk.Label(root, bg='white', text='Invuln Save')
+invuln_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=invuln_num, command=calculate)
+invuln_label.place(anchor='w', x=OFFSET, rely=TGTY)
+invuln_box.place(x=0, y=0)
+root.update()
+invuln_box.place(anchor='w', x=OFFSET + invuln_label.winfo_width()/2 - invuln_box.winfo_width()/2, rely=TGTY+0.04)
+
+OFFSET += invuln_label.winfo_width() + 15
+
+model_wounds_num = tk.IntVar(root, value=4)
+model_wounds_label = tk.Label(root, bg='white', text='Wounds')
+model_wounds_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=model_wounds_num, command=calculate)
+model_wounds_label.place(anchor='w', x=OFFSET, rely=TGTY)
+model_wounds_box.place(x=0, y=0)
+root.update()
+model_wounds_box.place(anchor='w', x=OFFSET + model_wounds_label.winfo_width()/2 - model_wounds_box.winfo_width()/2, rely=TGTY+0.04)
+
+OFFSET += model_wounds_label.winfo_width() + 15
+
+num_targets_num = tk.IntVar(root, value=4)
+num_targets_label = tk.Label(root, bg='white', text='# of Targets')
+num_targets_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=num_targets_num, command=calculate)
+num_targets_label.place(anchor='w', x=OFFSET, rely=TGTY)
+num_targets_box.place(x=0, y=0)
+root.update()
+num_targets_box.place(anchor='w', x=OFFSET + num_targets_label.winfo_width()/2 - num_targets_box.winfo_width()/2, rely=TGTY+0.04)
+
+OFFSET += num_targets_label.winfo_width() + 15
+
+point_cost_num = tk.IntVar(root, value=4)
+point_cost_label = tk.Label(root, bg='white', text='Points per Model')
+point_cost_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=point_cost_num, command=calculate)
+point_cost_label.place(anchor='w', x=OFFSET, rely=TGTY)
+point_cost_box.place(x=0, y=0)
+root.update()
+point_cost_box.place(anchor='w', x=OFFSET + point_cost_label.winfo_width()/2 - point_cost_box.winfo_width()/2, rely=TGTY+0.04)
+
+OFFSET += point_cost_label.winfo_width() + 15
+"""
 
 # Show window
 root.mainloop()
