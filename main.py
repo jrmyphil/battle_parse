@@ -1,20 +1,149 @@
+import math
 import tkinter as tk
 from tkinter import ttk
 from tkinter import simpledialog
 import random
 
+def set_vital_stats(atd, wipe, pointdmg):
+    if atd > 0.0:
+        avg_total_damage.set(str(atd))
+    else:
+        avg_total_damage.set("Error")
+    if wipe > 0.0:
+        shots_to_wipe.set(str(wipe))
+    else:
+        shots_to_wipe.set("Error")
+    if pointdmg > 0.0:
+        damage_per_point.set(str(pointdmg))
+    else:
+        damage_per_point.set("Error")
+
+def parse_random_string(s):
+    if s.isdigit():
+        return (0, 0, float(s))
+    try:
+        s = s.upper()
+        d_idx = s.find('D')
+        plus_idx = s.find('+')
+        minus_idx = s.find('-')
+        bonus = 0
+        if d_idx == 0:
+            num_dice = 1
+        else:
+            num_dice = int(s[:d_idx])
+        die_type = int(s[d_idx+1])
+        if plus_idx > -1:
+            bonus = int(s[plus_idx+1:])
+        elif minus_idx > -1:
+            bonus = -1 * int(s[minus_idx+1:])
+
+        return [num_dice, die_type, bonus]
+    except (IndexError, ValueError):
+        return [-1.0, -1.0, -1.0]
+
+def parse_sv_string(s):
+    try:
+        plus_idx = s.find('+')
+        if plus_idx == -1:
+            return float(s)
+        else:
+            return float(s[:plus_idx])
+    except ValueError:
+        return -1.0
+
+def parse_ap_string(s):
+    try:
+        if s == '':
+            return 0
+        minus_idx = s.find('-')
+        if minus_idx == -1:
+            return 0
+        else:
+            return int(s[minus_idx+1:])
+    except ValueError:
+        return 0
 
 def calculate(*args):
-    global chance_stringvar, props
+    global props
+    my_props = props.get(0, tk.END)
 
+    # Attacker Stats
+    attacks = a_boxes['A'].get()
+    damage = a_boxes['D'].get()
+    BS = a_boxes['BS'].get()
+    strength = a_boxes['S'].get()
+    AP = a_boxes['AP'].get()
+    if BS.isdigit():
+        BS = float(BS)
+    else:
+        BS = -1.0
+    if strength.isdigit():
+        strength = float(strength)
+    else:
+        strength = -1.0
+    if AP.isdigit():
+        AP = float(AP)
+    else:
+        AP = -1.0
 
-    # ADD: Parse variable number of attacks
+    # Target Stats
+    toughness = t_boxes['T'].get()
+    save = parse_sv_string(t_boxes['Sv'].get())
+    invuln = parse_sv_string(t_boxes['Sv'].get())
+    wounds = t_boxes['W'].get()
+    models = t_boxes['M'].get()
+    if toughness.isdigit():
+        toughness = float(toughness)
+    else:
+        toughness = -1.0
+    if wounds.isdigit():
+        wounds = float(wounds)
+    else:
+        wounds = -1.0
+    if models.isdigit():
+        models = float(models)
+    else:
+        models = -1.0
+
+    # Make my_props tuple
+    my_props = props.get(0, tk.END)
+
+    # Calculate full number of attacks
+    blast_x = float(blast_box.get())
+    attacks = parse_random_string(attacks)
+    attacks_die_num = attacks[0]
+    attacks_die_size = attacks[1]
+    attacks_bonus = attacks[2]
+    avg_attacks = 0
+    blast_bonus = blast_x * (math.floor(models // 5))
+    if attacks_die_num > 0:
+        avg_attacks = (attacks_die_num + blast_bonus) * ((1 + attacks_die_size) / 2) + attacks_bonus
+    else:
+        avg_attacks += attacks_bonus + blast_bonus
+    print(f"avg_attacks: {avg_attacks}")
+
 
     # Hit chance calculation
-    # chance_to_hit = (6 - ballistic_skill.get() + 1) / 6
+    reroll_1s = 'Reroll 1s to Hit' in my_props
+    reroll_misses = 'Reroll All Misses' in my_props
+    torrent = 'Torrent' in my_props
+    hit_chance = (7 - BS) / 6
+    if torrent:
+        hit_chance = 1.0
+    elif reroll_misses:
+        hit_chance += (1 - hit_chance) * hit_chance
+    elif reroll_1s:
+        hit_chance += (1 / 6) * hit_chance
 
-    # Update the chance variable for display
-    chance_stringvar.set("Chance: " + str(0.5))
+    #hit_chance = min(hit_chance, 1.0)
+    avg_hits = avg_attacks * hit_chance
+
+    print(f"avg_hits: {avg_hits}")
+
+    try:
+        set_vital_stats(round(attacks * damage, 2), 0.0, 0.0)
+    except:
+        set_vital_stats(-1.0, -1.0, -1.0)
 
 
 def build_all_props_list(box):
@@ -24,27 +153,38 @@ def build_all_props_list(box):
 
 
 def add_prop():
-    global PROPERTIES, all_props, props
+    global PROPERTIES, all_props, props, blast_label, blast_box
     selected_keys = all_props.curselection()
     prop_names = []
     for i in range(len(selected_keys)):
         prop_names.append(all_props.get(selected_keys[i]))
         if not is_in_listbox(props, prop_names[i]):
             props.insert(selected_keys[i], prop_names[i])
+    if "Blast/Cleave" in prop_names:
+        blast_label.place(relx=0.47, rely=0.442)
+        blast_box.place(relx=0.651, rely=0.445)
     calculate()
 
 
 def remove_prop():
-    global props
+    global props, blast_label, blast_box, blast_num
     selected_key = props.curselection()[0]
     props.delete(selected_key)
+    my_props = props.get(0, tk.END)
+    if not 'Blast/Cleave' in my_props:
+        blast_label.place_forget()
+        blast_box.place_forget()
+        blast_num.set('0')
     calculate()
 
 
 def remove_all():
-    global props
+    global props, blast_label, blast_box, blast_num
     props.delete(0, 'end')
-
+    blast_label.place_forget()
+    blast_box.place_forget()
+    blast_num.set('0')
+    calculate()
 
 def get_key(d, target):
     for key in d.keys():
@@ -61,7 +201,17 @@ def is_in_listbox(box, target):
 
 
 def light_infantry():
-    pass
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '3')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '4+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '1')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '10')
+    calculate()
 
 
 def medium_infantry():
@@ -136,10 +286,28 @@ root.config(menu=menubar)
 save_button = tk.Button(root, text='Save to File', command=save_to_file)
 save_button.place(anchor='nw', relx=0.01, rely=0.004)
 
-# Create the chance output
-chance_stringvar = tk.StringVar(root, value=("Chance: " + str(base_chance)))
-chance_label = tk.Label(root, bg='white', width=12, anchor='w', textvariable=chance_stringvar)
-chance_label.place(anchor='n', relx=0.5, rely=0.01)
+# Create the section label
+vital_stats_sect_label = tk.Label(root, bg='black', fg='white', text='==Vital Stats==', width=50)
+vital_stats_sect_label.place(anchor='n', relx=0.5, rely=0.75)
+
+# Create the vital stats and output labels for them
+avg_total_damage_title = tk.Label(root, text="Avg Total Damage:", bg='black', fg='white', width=28, anchor='w')
+avg_total_damage_title.place(anchor='nw', x=10, rely=0.8)
+avg_total_damage = tk.StringVar(root, value="0.0")
+avg_total_damage_label = tk.Label(root, bg='black', fg='white', width=6, anchor='e', textvariable=avg_total_damage)
+avg_total_damage_label.place(anchor='nw', x=160, rely=0.8)
+
+shots_to_wipe_title = tk.Label(root, text="Shots to Wipe All Models:", bg='black', fg='white', width=28, anchor='w')
+shots_to_wipe_title.place(anchor='nw', x=10, rely=0.84)
+shots_to_wipe = tk.StringVar(root, value="0.0")
+shots_to_wipe_label = tk.Label(root, bg='black', fg='white', width=6, anchor='e', textvariable=shots_to_wipe)
+shots_to_wipe_label.place(anchor='nw', x=160, rely=0.84)
+
+damage_per_point_title = tk.Label(root, text="Damage per Point:", bg='black', fg='white', width=28, anchor='w')
+damage_per_point_title.place(anchor='nw', x=10, rely=0.88)
+damage_per_point = tk.StringVar(root, value="0.0")
+damage_per_point_label = tk.Label(root, bg='black', fg='white', width=6, anchor='e', textvariable=damage_per_point)
+damage_per_point_label.place(anchor='nw', x=160, rely=0.88)
 
 # Create the attacker stat list and UI widgets
 a_stat_list = ["A", "BS", "S", "AP", "D"]
@@ -198,6 +366,10 @@ remove_button.place(anchor='ne', relx=0.695, rely=0.25)
 remove_all_button = tk.Button(root, text="☒☒", font=("Times New Roman", 18), command=remove_all)
 remove_all_button.place(anchor='ne', relx=0.695, rely=0.325)
 
+blast_label = tk.Label(root, text="Blast/Cleave X = ")
+blast_num = tk.StringVar(root, value='0')
+blast_box = tk.Spinbox(root, width=1, textvariable=blast_num, command=calculate, from_=0, to=9)
+
 # Create the attacker stat list and UI widgets
 t_stat_list = ["T", "Sv", "Inv", "W", "M"]
 t_stats = {"T":tk.StringVar(root, value=''),
@@ -235,74 +407,6 @@ for i in range(len(t_stat_list)):
     root.update()
     offset += t_labels[t_stat_list[i]].winfo_width() + 20
 
-"""
-TGTY = 0.665
-OFFSET = 10
-
-# Create IntVars, labels, and Scales for each TARGET attribute
-toughness_num = tk.IntVar(root, value=4)
-toughness_label = tk.Label(root, bg='white', text='Toughness')
-toughness_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=toughness_num, command=calculate)
-toughness_label.place(anchor='w', x=OFFSET, rely=TGTY)
-toughness_box.place(x=0, y=0)
-root.update()
-toughness_box.place(anchor='w', x=OFFSET + toughness_label.winfo_width()/2 - toughness_box.winfo_width()/2, rely=TGTY+0.04)
-
-OFFSET += toughness_label.winfo_width() + 15
-
-armor_num = tk.IntVar(root, value=4)
-armor_label = tk.Label(root, bg='white', text='Armor Save')
-armor_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=armor_num, command=calculate)
-armor_label.place(anchor='w', x=OFFSET, rely=TGTY)
-armor_box.place(x=0, y=0)
-root.update()
-armor_box.place(anchor='w', x=OFFSET + armor_label.winfo_width()/2 - armor_box.winfo_width()/2, rely=TGTY+0.04)
-
-OFFSET += armor_label.winfo_width() + 15
-
-invuln_num = tk.IntVar(root, value=4)
-invuln_label = tk.Label(root, bg='white', text='Invuln Save')
-invuln_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=invuln_num, command=calculate)
-invuln_label.place(anchor='w', x=OFFSET, rely=TGTY)
-invuln_box.place(x=0, y=0)
-root.update()
-invuln_box.place(anchor='w', x=OFFSET + invuln_label.winfo_width()/2 - invuln_box.winfo_width()/2, rely=TGTY+0.04)
-
-OFFSET += invuln_label.winfo_width() + 15
-
-model_wounds_num = tk.IntVar(root, value=4)
-model_wounds_label = tk.Label(root, bg='white', text='Wounds')
-model_wounds_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=model_wounds_num, command=calculate)
-model_wounds_label.place(anchor='w', x=OFFSET, rely=TGTY)
-model_wounds_box.place(x=0, y=0)
-root.update()
-model_wounds_box.place(anchor='w', x=OFFSET + model_wounds_label.winfo_width()/2 - model_wounds_box.winfo_width()/2, rely=TGTY+0.04)
-
-OFFSET += model_wounds_label.winfo_width() + 15
-
-num_targets_num = tk.IntVar(root, value=4)
-num_targets_label = tk.Label(root, bg='white', text='# of Targets')
-num_targets_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=num_targets_num, command=calculate)
-num_targets_label.place(anchor='w', x=OFFSET, rely=TGTY)
-num_targets_box.place(x=0, y=0)
-root.update()
-num_targets_box.place(anchor='w', x=OFFSET + num_targets_label.winfo_width()/2 - num_targets_box.winfo_width()/2, rely=TGTY+0.04)
-
-OFFSET += num_targets_label.winfo_width() + 15
-
-point_cost_num = tk.IntVar(root, value=4)
-point_cost_label = tk.Label(root, bg='white', text='Points per Model')
-point_cost_box = tk.Spinbox(root, from_=1, to=30, width=1, textvariable=point_cost_num, command=calculate)
-point_cost_label.place(anchor='w', x=OFFSET, rely=TGTY)
-point_cost_box.place(x=0, y=0)
-root.update()
-point_cost_box.place(anchor='w', x=OFFSET + point_cost_label.winfo_width()/2 - point_cost_box.winfo_width()/2, rely=TGTY+0.04)
-
-OFFSET += point_cost_label.winfo_width() + 15
-"""
-
 # Show window
 root.mainloop()
-
-
 
