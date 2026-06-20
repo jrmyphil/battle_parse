@@ -116,10 +116,30 @@ def calculate(*args):
     attacks_bonus = attacks[2]
     avg_attacks = 0
     blast_bonus = blast_x * (math.floor(models // 5))
-    if attacks_die_num > 0:
-        avg_attacks = (attacks_die_num + blast_bonus) * ((1 + attacks_die_size) / 2) + attacks_bonus
-    else:
+    if attacks_die_num == 0:
         avg_attacks += attacks_bonus + blast_bonus
+    else:
+        if not "Reroll # Attacks" in my_props:
+            blasted_attacks = attacks_die_num + blast_bonus
+            avg_attacks = blasted_attacks * ((1 + attacks_die_size) / 2) + attacks_bonus
+        else:
+            blasted_attacks = attacks_die_num + blast_bonus
+            """
+            if attacks_die_size == 3:
+                rerolled_die = (2 + 2 + 3) / 3
+            else:
+                rerolled_die = (3.5 + 3.5 + 3.5 + 4 + 5 + 6) / 6
+            """
+            avg_roll = (1 + attacks_die_size) / 2
+            rerolled_die = 0
+            for num in range(1, attacks_die_size + 1):
+                if num < avg_roll:
+                    rerolled_die += avg_roll
+                else:
+                    rerolled_die += num
+            rerolled_die /= attacks_die_size
+            avg_attacks = blasted_attacks * rerolled_die + attacks_bonus
+
     print(f"avg_attacks: {avg_attacks}")
 
 
@@ -127,7 +147,9 @@ def calculate(*args):
     reroll_1s = 'Reroll 1s to Hit' in my_props
     reroll_misses = 'Reroll All Misses' in my_props
     torrent = 'Torrent' in my_props
+
     hit_chance = (7 - BS) / 6
+
     if torrent:
         hit_chance = 1.0
     elif reroll_misses:
@@ -135,10 +157,47 @@ def calculate(*args):
     elif reroll_1s:
         hit_chance += (1 / 6) * hit_chance
 
-    #hit_chance = min(hit_chance, 1.0)
-    avg_hits = avg_attacks * hit_chance
+
+    # Average number of hits calculation
+    crit_target_num = int(crit_num.get())
+    sustained_addition = int(sustained_num.get())
+
+    avg_hits = (avg_attacks * hit_chance)
+    avg_hits += avg_attacks * (((7 - crit_target_num) / 6) * sustained_addition)
 
     print(f"avg_hits: {avg_hits}")
+
+    # Wound chance calculation
+    twin_linked = 'Twin-Linked' in my_props
+    lethal_hits = 'Lethal Hits' in my_props
+
+    wound_chance = 0
+    if strength <= (toughness / 2):
+        wound_chance = 1 / 6
+    elif strength < toughness:
+        wound_chance = 2 / 6
+    elif strength == toughness:
+        wound_chance = 3 / 6
+    elif strength >= (toughness * 2):
+        wound_chance = 5 / 6
+    elif strength > toughness:
+        wound_chance = 4 / 6
+
+    if twin_linked:
+        wound_chance += (1 - wound_chance) * wound_chance
+
+    if lethal_hits:
+        lethal_chance = (7 - crit_target_num) / 6
+        wound_chance = ((hit_chance - lethal_chance) * wound_chance) + lethal_chance
+        # NOTE: LETHAL HITS NOT WORKING CORRECTLY. WOUND CHANCE DECREASES WHEN IT IS ENABLED.
+
+
+    print(f"wound_chance: {wound_chance}")
+
+    # Average number of wounds calculation
+    avg_wounds = avg_hits * wound_chance
+
+    print(f"avg_wounds: {avg_wounds}")
 
     try:
         set_vital_stats(round(attacks * damage, 2), 0.0, 0.0)
@@ -163,6 +222,12 @@ def add_prop():
     if "Blast/Cleave" in prop_names:
         blast_label.place(relx=0.47, rely=0.442)
         blast_box.place(relx=0.651, rely=0.445)
+    if "Crit X+" in prop_names:
+        crit_label.place(relx=0.56, rely=0.487)
+        crit_box.place(relx=0.651, rely=0.490)
+    if "Sustained Hits" in prop_names:
+        sustained_label.place(relx=0.45, rely=0.532)
+        sustained_box.place(relx=0.651, rely=0.535)
     calculate()
 
 
@@ -175,6 +240,14 @@ def remove_prop():
         blast_label.place_forget()
         blast_box.place_forget()
         blast_num.set('0')
+    if not 'Crit X+' in my_props:
+        crit_label.place_forget()
+        crit_box.place_forget()
+        crit_num.set('6')
+    if not 'Sustained Hits' in my_props:
+        sustained_label.place_forget()
+        sustained_box.place_forget()
+        sustained_num.set('0')
     calculate()
 
 
@@ -262,8 +335,8 @@ def save_to_file():
 
 
 base_chance = 0.5
-PROPERTIES = {0:"Anti", 1:"Blast/Cleave", 2:"Crit 4+", 3:"Crit 5+", 4:"Devastating Wounds",
-              5:"Lethal Hits", 6:"Melta", 7:"Reroll 1s to Hit", 8:"Reroll 1s to Wound",
+PROPERTIES = {0:"Anti", 1:"Blast/Cleave", 2:"Crit X+", 3:"Devastating Wounds",
+              4:"Lethal Hits", 5:"Melta", 6:"Reroll # Attacks", 7:"Reroll 1s to Hit", 8:"Reroll 1s to Wound",
               9:"Reroll All Misses", 10:"Sustained Hits", 11:"Torrent", 12:"Twin-Linked"}
 
 # Create the window
@@ -369,6 +442,14 @@ remove_all_button.place(anchor='ne', relx=0.695, rely=0.325)
 blast_label = tk.Label(root, text="Blast/Cleave X = ")
 blast_num = tk.StringVar(root, value='0')
 blast_box = tk.Spinbox(root, width=1, textvariable=blast_num, command=calculate, from_=0, to=9)
+
+crit_label = tk.Label(root, text="Crit X = ")
+crit_num = tk.StringVar(root, value='6')
+crit_box = tk.Spinbox(root, width=1, textvariable=crit_num, command=calculate, from_=1, to=6)
+
+sustained_label = tk.Label(root, text="Sustained Hits X = ")
+sustained_num = tk.StringVar(root, value='0')
+sustained_box = tk.Spinbox(root, width=1, textvariable=sustained_num, command=calculate, from_=0, to=9)
 
 # Create the attacker stat list and UI widgets
 t_stat_list = ["T", "Sv", "Inv", "W", "M"]
