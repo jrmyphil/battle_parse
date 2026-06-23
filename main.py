@@ -124,12 +124,6 @@ def calculate(*args):
             avg_attacks = blasted_attacks * ((1 + attacks_die_size) / 2) + attacks_bonus
         else:
             blasted_attacks = attacks_die_num + blast_bonus
-            """
-            if attacks_die_size == 3:
-                rerolled_die = (2 + 2 + 3) / 3
-            else:
-                rerolled_die = (3.5 + 3.5 + 3.5 + 4 + 5 + 6) / 6
-            """
             avg_roll = (1 + attacks_die_size) / 2
             rerolled_die = 0
             for num in range(1, attacks_die_size + 1):
@@ -170,7 +164,10 @@ def calculate(*args):
     # Wound chance calculation
     twin_linked = 'Twin-Linked' in my_props
     lethal_hits = 'Lethal Hits' in my_props
+    anti = 'Anti' in my_props
+    anti_target_num = int(anti_num.get())
 
+    anti_wound_chance = (7 - anti_target_num) / 6
     wound_chance = 0
     if strength <= (toughness / 2):
         wound_chance = 1 / 6
@@ -183,19 +180,26 @@ def calculate(*args):
     elif strength > toughness:
         wound_chance = 4 / 6
 
+    if anti and (wound_chance < anti_wound_chance):
+        wound_chance = anti_wound_chance
+
     if twin_linked:
         wound_chance += (1 - wound_chance) * wound_chance
 
     if lethal_hits:
         lethal_chance = (7 - crit_target_num) / 6
-        wound_chance = ((hit_chance - lethal_chance) * wound_chance) + lethal_chance
-        # NOTE: LETHAL HITS NOT WORKING CORRECTLY. WOUND CHANCE DECREASES WHEN IT IS ENABLED.
+    else:
+        lethal_chance = 0
 
+    # NOTE: Is this true? Can wound chance NEVER go lower than 1/6 or higher than 5/6?
+    wound_chance = max((1/6), min((5/6), wound_chance))
 
     print(f"wound_chance: {wound_chance}")
 
     # Average number of wounds calculation
-    avg_wounds = avg_hits * wound_chance
+    avg_lethals = lethal_chance * avg_attacks
+    hits_minus_auto_wounds = avg_hits - avg_lethals
+    avg_wounds = avg_lethals + (wound_chance * hits_minus_auto_wounds)
 
     print(f"avg_wounds: {avg_wounds}")
 
@@ -212,30 +216,37 @@ def build_all_props_list(box):
 
 
 def add_prop():
-    global PROPERTIES, all_props, props, blast_label, blast_box
+    global PROPERTIES, all_props, props
     selected_keys = all_props.curselection()
     prop_names = []
     for i in range(len(selected_keys)):
         prop_names.append(all_props.get(selected_keys[i]))
         if not is_in_listbox(props, prop_names[i]):
             props.insert(selected_keys[i], prop_names[i])
-    if "Blast/Cleave" in prop_names:
+    if 'Anti' in prop_names:
+        anti_label.place(relx=0.30, rely=0.442)
+        anti_box.place(relx=0.4, rely=0.445)
+    if 'Blast/Cleave' in prop_names:
         blast_label.place(relx=0.47, rely=0.442)
         blast_box.place(relx=0.651, rely=0.445)
-    if "Crit X+" in prop_names:
+    if 'Crit X+' in prop_names:
         crit_label.place(relx=0.56, rely=0.487)
         crit_box.place(relx=0.651, rely=0.490)
-    if "Sustained Hits" in prop_names:
+    if 'Sustained Hits' in prop_names:
         sustained_label.place(relx=0.45, rely=0.532)
         sustained_box.place(relx=0.651, rely=0.535)
     calculate()
 
 
 def remove_prop():
-    global props, blast_label, blast_box, blast_num
+    global props
     selected_key = props.curselection()[0]
     props.delete(selected_key)
     my_props = props.get(0, tk.END)
+    if not 'Anti' in my_props:
+        anti_label.place_forget()
+        anti_box.place_forget()
+        anti_num.set('0')
     if not 'Blast/Cleave' in my_props:
         blast_label.place_forget()
         blast_box.place_forget()
@@ -438,6 +449,10 @@ remove_button.place(anchor='ne', relx=0.695, rely=0.25)
 
 remove_all_button = tk.Button(root, text="☒☒", font=("Times New Roman", 18), command=remove_all)
 remove_all_button.place(anchor='ne', relx=0.695, rely=0.325)
+
+anti_label = tk.Label(root, text="Anti X = ")
+anti_num = tk.StringVar(root, value='0')
+anti_box = tk.Spinbox(root, width=1, textvariable=anti_num, command=calculate, from_=1, to=6)
 
 blast_label = tk.Label(root, text="Blast/Cleave X = ")
 blast_num = tk.StringVar(root, value='0')
