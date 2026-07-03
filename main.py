@@ -10,7 +10,7 @@ def set_vital_stats(atd, wipe, pointdmg):
     if wipe > 0.0:
         shots_to_wipe.set(str(wipe))
     else:
-        shots_to_wipe.set("Error")
+        shots_to_wipe.set("∞")
     if pointdmg > 0.0:
         damage_per_point.set(str(pointdmg))
     else:
@@ -249,7 +249,7 @@ def calculate(*args):
     FNP_chance = (7 - FNP) / 6
     FNP_failure_chance = 1.0 - FNP_chance
     total_unsaved_attacks = (saveable_wounds * save_failure_chance) + num_devastating_crits
-
+    print(f"FNP_failure_chance: {FNP_failure_chance}")
     print(f"total_unsaved_attacks: {total_unsaved_attacks}")
 
     # Damage calculations
@@ -259,12 +259,12 @@ def calculate(*args):
     damage_bonus = damage[2]
     if melta:
         damage_bonus += int(melta_num.get())
-    avg_d_stat = damage_die_num + ((damage_die_size + 1) / 2) + damage_bonus
+    if damage_die_size > 0:
+        avg_d_stat = damage_die_num + ((damage_die_size + 1) / 2) + damage_bonus
+    else:
+        avg_d_stat = damage_bonus
     damage_after_FNP = avg_d_stat * FNP_failure_chance
-
-    # Old full_damage calculation
-    # full_damage = total_unsaved_attacks * avg_d_stat
-    # full_damage *= FNP_failure_chance
+    print(f"avg_d_stat: {avg_d_stat}")
 
     # Full damage calculations (iterative)
     full_damage = 0.0
@@ -276,23 +276,32 @@ def calculate(*args):
         if current_model_wounds <= 0:
             current_model_wounds = wounds
             models_remaining -= 1
-            if models_remaining <= 0:
+            if models_remaining == 0:
                 break
 
-    # Figure out what to do about the fractional unsaved attacks remaining
+    fractional_attack = total_unsaved_attacks % 1.0
+    if models_remaining > 0 and fractional_attack > 0:
+        fractional_damage = fractional_attack * min(damage_after_FNP, current_model_wounds)
+        full_damage += fractional_damage
+        current_model_wounds -= fractional_damage
+        if current_model_wounds <= 0:
+            models_remaining -= 1
 
     print(f"full_damage: {full_damage}")
 
     # Rounds to Wipe calculation
+    rounds_to_wipe = 0.0
     try:
         kills_per_round = models - models_remaining
+        print(f"--models: {models}")
+        print(f"--models_remaining: {models_remaining}")
+        print(f"--kills_per_round: {kills_per_round}")
         rounds_to_wipe = models // kills_per_round
         if models % kills_per_round > 0:
             rounds_to_wipe += 1.0
     except:
         rounds_to_wipe = -1.0
-
-
+    print(f"--rounds_to_wipe: {rounds_to_wipe}")
     # Points per Damage calculation
     if points > 0:
         points_per_damage = full_damage / points
@@ -432,6 +441,16 @@ def light_infantry():
     t_boxes['W'].insert(0, '1')
     t_boxes['M'].delete(0, tk.END)
     t_boxes['M'].insert(0, '10')
+    a_boxes['A'].delete(0, tk.END)
+    a_boxes['A'].insert(0, '1')
+    a_boxes['BS'].delete(0, tk.END)
+    a_boxes['BS'].insert(0, '4+')
+    a_boxes['S'].delete(0, tk.END)
+    a_boxes['S'].insert(0, '3')
+    a_boxes['AP'].delete(0, tk.END)
+    a_boxes['AP'].insert(0, '0')
+    a_boxes['D'].delete(0, tk.END)
+    a_boxes['D'].insert(0, '1')
     calculate()
 
 def medium_infantry():
