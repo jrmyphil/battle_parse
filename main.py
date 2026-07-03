@@ -77,7 +77,7 @@ def calculate(*args):
     global props
     my_props = props.get(0, tk.END)
 
-    print("==Calculating==")
+    #print("==Calculating==")
 
     # Attacker Stats
     attacks = parse_random_string(a_boxes['A'].get())
@@ -148,7 +148,7 @@ def calculate(*args):
             rerolled_die /= attacks_die_size
             avg_attacks = blasted_attacks * rerolled_die + attacks_bonus
 
-    print(f"avg_attacks: {avg_attacks}")
+    #print(f"avg_attacks: {avg_attacks}")
 
 
     # Hit chance calculation
@@ -172,7 +172,7 @@ def calculate(*args):
     avg_hits = (avg_attacks * hit_chance)
     avg_hits += avg_attacks * (((7 - crit_target_num) / 6) * sustained_addition)
 
-    print(f"avg_hits: {avg_hits}")
+    #print(f"avg_hits: {avg_hits}")
 
     # Wound chance calculation
     twin_linked = 'Twin-Linked' in my_props
@@ -219,7 +219,7 @@ def calculate(*args):
 
     wound_chance = max((1/6), min((5/6), wound_chance))
 
-    print(f"wound_chance: {wound_chance}")
+    #print(f"wound_chance: {wound_chance}")
 
     # Average number of wounds calculation
     avg_lethals = lethal_chance * avg_attacks
@@ -239,18 +239,18 @@ def calculate(*args):
             non_auto_wound_rolls = hits_minus_auto_wounds * (5 / 6)
 
     saveable_wounds = (non_auto_wound_rolls + avg_lethals) * wound_chance
-    print(f"saveable_wounds: {saveable_wounds}")
+    #print(f"saveable_wounds: {saveable_wounds}")
 
     # Save calculations
     save_target_num = min((save + AP), invuln)
     save_chance = (7 - save_target_num) / 6
     save_failure_chance = 1.0 - save_chance
-    print(f"save_failure_chance: {save_failure_chance}")
+    #print(f"save_failure_chance: {save_failure_chance}")
     FNP_chance = (7 - FNP) / 6
     FNP_failure_chance = 1.0 - FNP_chance
     total_unsaved_attacks = (saveable_wounds * save_failure_chance) + num_devastating_crits
-    print(f"FNP_failure_chance: {FNP_failure_chance}")
-    print(f"total_unsaved_attacks: {total_unsaved_attacks}")
+    #print(f"FNP_failure_chance: {FNP_failure_chance}")
+    #print(f"total_unsaved_attacks: {total_unsaved_attacks}")
 
     # Damage calculations
     melta = 'Melta' in my_props
@@ -264,7 +264,7 @@ def calculate(*args):
     else:
         avg_d_stat = damage_bonus
     damage_after_FNP = avg_d_stat * FNP_failure_chance
-    print(f"avg_d_stat: {avg_d_stat}")
+    #print(f"avg_d_stat: {avg_d_stat}")
 
     # Full damage calculations (iterative)
     full_damage = 0.0
@@ -287,21 +287,21 @@ def calculate(*args):
         if current_model_wounds <= 0:
             models_remaining -= 1
 
-    print(f"full_damage: {full_damage}")
+    #print(f"full_damage: {full_damage}")
 
     # Rounds to Wipe calculation
     rounds_to_wipe = 0.0
     try:
         kills_per_round = models - models_remaining
-        print(f"--models: {models}")
-        print(f"--models_remaining: {models_remaining}")
-        print(f"--kills_per_round: {kills_per_round}")
+        #print(f"--models: {models}")
+        #print(f"--models_remaining: {models_remaining}")
+        #print(f"--kills_per_round: {kills_per_round}")
         rounds_to_wipe = models // kills_per_round
         if models % kills_per_round > 0:
             rounds_to_wipe += 1.0
     except:
         rounds_to_wipe = -1.0
-    print(f"--rounds_to_wipe: {rounds_to_wipe}")
+    #print(f"--rounds_to_wipe: {rounds_to_wipe}")
     # Points per Damage calculation
     if points > 0:
         points_per_damage = full_damage / points
@@ -441,16 +441,6 @@ def light_infantry():
     t_boxes['W'].insert(0, '1')
     t_boxes['M'].delete(0, tk.END)
     t_boxes['M'].insert(0, '10')
-    a_boxes['A'].delete(0, tk.END)
-    a_boxes['A'].insert(0, '1')
-    a_boxes['BS'].delete(0, tk.END)
-    a_boxes['BS'].insert(0, '4+')
-    a_boxes['S'].delete(0, tk.END)
-    a_boxes['S'].insert(0, '3')
-    a_boxes['AP'].delete(0, tk.END)
-    a_boxes['AP'].insert(0, '0')
-    a_boxes['D'].delete(0, tk.END)
-    a_boxes['D'].insert(0, '1')
     calculate()
 
 def medium_infantry():
