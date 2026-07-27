@@ -80,14 +80,23 @@ def calculate(*args):
     #print("==Calculating==")
 
     # Attacker Stats
+    # if models_num.get().isdigit():
+    #     models = int(models_num.get())
+    # else:
+    #     models = 1
     attacks = parse_random_string(a_boxes['A'].get())
     damage = parse_random_string(a_boxes['D'].get())
     BS = parse_sv_string(a_boxes['BS'].get())
     strength = a_boxes['S'].get()
     AP = parse_ap_string(a_boxes['AP'].get())
-    points = points_num.get()
-    if points.isdigit():
-        points = float(points)
+    # if points_num.get().isdigit():
+    #     points = float(points_num.get())
+    #     points_per_model = points / models
+    # else:
+    #     points = -1.0
+    #     points_per_model = -1.0
+    if points_num.get().isdigit():
+        points = float(points_num.get())
     else:
         points = -1.0
     if BS < 7:
@@ -155,8 +164,14 @@ def calculate(*args):
     reroll_1s = 'Reroll 1s to Hit' in my_props
     reroll_misses = 'Reroll All Misses' in my_props
     torrent = 'Torrent' in my_props
+    stealthy = stealth_var.get() == 1
 
-    hit_chance = (7 - BS) / 6
+    if stealthy:
+        hit_chance = (6 - BS) / 6
+    else:
+        hit_chance = (7 - BS) / 6
+
+    hit_chance = max((1/6), min((5/6), hit_chance))
 
     if torrent:
         hit_chance = 1.0
@@ -267,6 +282,7 @@ def calculate(*args):
     #print(f"avg_d_stat: {avg_d_stat}")
 
     # Full damage calculations (iterative)
+    regen = regen_var.get() == 1
     full_damage = 0.0
     models_remaining = models
     current_model_wounds = wounds
@@ -278,6 +294,14 @@ def calculate(*args):
             models_remaining -= 1
             if models_remaining == 0:
                 break
+
+    if regen and models_remaining > 0:
+        if current_model_wounds == wounds and models_remaining < models:
+            models_remaining += 1
+        elif current_model_wounds < wounds:
+            current_model_wounds += 2
+            current_model_wounds = min(current_model_wounds, wounds)
+
 
     fractional_attack = total_unsaved_attacks % 1.0
     if models_remaining > 0 and fractional_attack > 0:
@@ -441,50 +465,202 @@ def light_infantry():
     t_boxes['W'].insert(0, '1')
     t_boxes['M'].delete(0, tk.END)
     t_boxes['M'].insert(0, '10')
+    regen_var.set(0)
     calculate()
 
 def medium_infantry():
-    pass
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '4')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '3+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '2')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '10')
+    regen_var.set(0)
+    calculate()
 
 def heavy_infantry():
-    pass
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '6')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '2+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '4+')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '3')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '5')
+    regen_var.set(0)
+    calculate()
 
-def bike():
-    pass
+def fast_vehicle():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '4')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '4+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '4+')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '3')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '4')
+    regen_var.set(0)
+    calculate()
+
+def medium_vehicle():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '6')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '4+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '4+')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '6')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '1')
+    regen_var.set(0)
+    calculate()
+
+def transport_vehicle():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '9')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '3+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '10')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '1')
+    regen_var.set(0)
+    calculate()
+
+def light_tank():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '10')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '2+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '11')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '1')
+    regen_var.set(0)
+    calculate()
+
+def medium_tank():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '12')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '2+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '16')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '1')
+    regen_var.set(0)
+    calculate()
+
+def heavy_tank():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '13')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '2+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '24')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '1')
+    regen_var.set(0)
+    calculate()
+
+def giant_robot():
+    t_boxes['T'].delete(0, tk.END)
+    t_boxes['T'].insert(0, '11')
+    t_boxes['Sv'].delete(0, tk.END)
+    t_boxes['Sv'].insert(0, '3+')
+    t_boxes['Inv'].delete(0, tk.END)
+    t_boxes['Inv'].insert(0, '5+')
+    t_boxes['W'].delete(0, tk.END)
+    t_boxes['W'].insert(0, '26')
+    t_boxes['M'].delete(0, tk.END)
+    t_boxes['M'].insert(0, '1')
+    regen_var.set(0)
+    calculate()
 
 def save_to_file():
-    global root, attacks, ballistic_skill, strength, toughness_num, armor_num, invuln_num, chance_stringvar, props
+    global props
     title = simpledialog.askstring("Input", "Enter a title:")
-    properties_string = ''
     properties_tuple = props.get(0, 'end')
-    for thing in properties_tuple:
-        if properties_string != '':
-            properties_string += ', '
-        properties_string += str(thing)
-    chance_string = chance_stringvar.get()
-    zero_idx = chance_string.find("0")
-    chance_string = chance_string[zero_idx:]
-    chance_float = float(chance_string)
-    chance_float *= 100
-    chance_float = round(chance_float, 3)
-    string = ''
-    # string = ("\n\n=============================\n" +
-    #           title +
-    #           "\n=============================" +
-    #           "\nChance to damage: " + str(chance_float) + "%" +
-    #           "\nAttacker Profile:" +
-    #           "\nA: " + str(attacks.get()) +
-    #           "\tB: " + str(ballistic_skill.get()) +
-    #           "\tC: " + str(strength.get()) +
-    #           "\n" + properties_string +
-    #           "\n----------------------------" +
-    #           "\nDefender Profile:" +
-    #           "\nX: " + str(toughness_num.get()) +
-    #           "\tY: " + str(armor_num.get()) +
-    #           "\tZ: " + str(invuln_num.get()))
+    properties_string = '; '.join(properties_tuple)
+    # properties_string = ''
+    # for thing in properties_tuple:
+    #     if properties_string != '':
+    #         properties_string += ','
+    #     properties_string += str(thing)
+    c = ','
+    n = ',\n'
+    result = title + n
+    ap = parse_ap_string(a_stats['AP'].get())
+    ap_string = '-'
+    if ap != 0:
+        ap_string += str(ap)
+    inv = t_stats['Inv'].get()
+    if not inv:
+        inv = '-'
+    fnp = fnp_num.get()
+    if not fnp_num:
+        fnp = '-'
+    target_props = []
+    if stealth_var.get() == 1:
+        target_props.append('Stealth')
+    if regen_var.get() == 1:
+        target_props.append('Regenerates')
+    target_props_string = '; '.join(target_props)
+    a_column = ['Attacker',
+                'A:,' + a_stats['A'].get(),
+                'BS/WS:,' + a_stats['BS'].get(),
+                'S:,' + a_stats['S'].get(),
+                'AP:,' + ap_string,
+                'D:,' + a_stats['D'].get(),
+                'Points:,' + points_num.get(),
+                'Properties:,' + properties_string
+                ]
+    d_column = ['Defender',
+                'T:,' + t_stats['T'].get(),
+                'Sv:,' + t_stats['Sv'].get(),
+                'Inv:,' + inv,
+                'W:,' + t_stats['W'].get(),
+                'FNP:,' + fnp,
+                'Models:,' + t_stats['M'].get(),
+                'Properties:,' + target_props_string
+                ]
+    for i in range(len(a_column)):
+        result += a_column[i]
+        if i == 0:
+            result += c * 4
+        else:
+            result += c * 3
+        result += d_column[i]
+        result += n
+    result += n
+    result += 'Avg Total Damage:,' + avg_total_damage.get() + n
+    result += 'Dmg Per Point:,' + damage_per_point.get() + n
+    result += 'Rounds to Wipe:,'
+    if shots_to_wipe.get() == '∞':
+        result += 'Inf'
+    else:
+        result += shots_to_wipe.get()
+    result += (n * 3)
 
-    with open("results.txt", "a", encoding="utf-8") as f:
-        f.write(string)
+    with open("results.csv", "a", encoding="utf-8") as f:
+        f.write(result)
 
 
 base_chance = 0.5
@@ -498,13 +674,18 @@ root.geometry('510x800')
 
 menubar = tk.Menu(root, bg='#6E6E6E', fg='#FFFFFF', activebackground='#ABABAB', relief='raised')
 profiles = tk.Menu(menubar, tearoff=0, bg='#6E6E6E', activebackground='#ABABAB', relief='raised')
-menubar.add_cascade(label='Defender Profiles', menu=profiles)
+menubar.add_cascade(label='Defender Profiles Menu', menu=profiles)
 profiles.add_command(label='Light Infantry', command=light_infantry)
 profiles.add_command(label='Medium Infantry', command=medium_infantry)
 profiles.add_command(label='Heavy Infantry', command=heavy_infantry)
-profiles.add_command(label='Bike', command=bike)
-profiles.add_command(label='Light Vehicle')
-profiles.add_command(label='Heavy Vehicle')
+profiles.add_command(label='Fast Vehicle', command=fast_vehicle)
+profiles.add_command(label='Medium Vehicle', command=medium_vehicle)
+profiles.add_command(label='Transport Vehicle', command=transport_vehicle)
+profiles.add_command(label='Medium Vehicle', command=medium_vehicle)
+profiles.add_command(label='Light Tank', command=light_tank)
+profiles.add_command(label='Medium Tank', command=medium_tank)
+profiles.add_command(label='Heavy Tank', command=heavy_tank)
+profiles.add_command(label='Giant Robot', command=giant_robot)
 
 root.config(menu=menubar)
 
@@ -572,9 +753,16 @@ for i in range(len(a_stat_list)):
     root.update()
     offset += a_labels[a_stat_list[i]].winfo_width() + 64
 
+# models_num = tk.StringVar(root, value='')
+# models_num.trace_add("write", calculate)
+# models_label = tk.Label(root, bg='white', text='# Models')
+# models_box = tk.Entry(root, textvariable=models_num, width=5)
+# models_label.place(anchor='w', x=10, y=atkY+52)
+# models_box.place(anchor='w', x=10, y=atkY+76)
+
 points_num = tk.StringVar(root, value='')
 points_num.trace_add("write", calculate)
-points_label = tk.Label(root, bg='white', text='Points Per Model')
+points_label = tk.Label(root, bg='white', text='Point Cost')
 points_box = tk.Entry(root, textvariable=points_num, width=5)
 points_label.place(anchor='w', x=10, y=atkY+52)
 points_box.place(anchor='w', x=10, y=atkY+76)
@@ -669,6 +857,14 @@ fnp_num.trace_add("write", calculate)
 fnp_box = tk.Entry(root, textvariable=fnp_num, width=5)
 fnp_label.place(anchor='w', x=10, y=tgtY+60)
 fnp_box.place(anchor='w', x=10, y=tgtY+84)
+
+stealth_var = tk.IntVar(root, value=0)
+stealth_box = tk.Checkbutton(root, text="Stealthy", variable=stealth_var, onvalue=1, offvalue=0, command=calculate)
+stealth_box.place(anchor='w', x=100, y=tgtY+84)
+
+regen_var = tk.IntVar(root, value=0)
+regen_box = tk.Checkbutton(root, text="Regenerates", variable=regen_var, onvalue=1, offvalue=0, command=calculate)
+regen_box.place(anchor='w', x=194, y=tgtY+84)
 
 # Show window
 root.mainloop()
